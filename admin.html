@@ -143,6 +143,8 @@
 
     const EVENT_DB_KEY = 'serraJrMarketingDB2026_v8';
     const TEAM_KEY = 'serraJrTeam2026';
+    const TEAM_EMAILS_KEY = 'serraJrTeamEmails2026';
+    const SYNC_CONFIG_KEY = 'serraJrSyncConfig2026';
     const ADMIN_SESSION_KEY = 'serraJrAdminSession';
     const ADMIN_PASSWORD = 'serrajr2026';
 
@@ -320,6 +322,13 @@
       const [whatsappMessage, setWhatsappMessage] = useState('');
       const [copied, setCopied] = useState(false);
 
+      const [teamEmails, setTeamEmails] = useState({});
+      const [showSyncConfigModal, setShowSyncConfigModal] = useState(false);
+      const [syncApiUrl, setSyncApiUrl] = useState('');
+      const [syncApiSecret, setSyncApiSecret] = useState('');
+      const [syncing, setSyncing] = useState(false);
+      const [syncResult, setSyncResult] = useState(null);
+
       // Carregar dados salvos
       useEffect(() => {
         const savedDB = localStorage.getItem(EVENT_DB_KEY);
@@ -328,6 +337,16 @@
 
         const savedTeam = localStorage.getItem(TEAM_KEY);
         if (savedTeam) setTeamMembers(JSON.parse(savedTeam));
+
+        const savedEmails = localStorage.getItem(TEAM_EMAILS_KEY);
+        if (savedEmails) setTeamEmails(JSON.parse(savedEmails));
+
+        const savedSyncConfig = localStorage.getItem(SYNC_CONFIG_KEY);
+        if (savedSyncConfig) {
+          const parsed = JSON.parse(savedSyncConfig);
+          setSyncApiUrl(parsed.apiUrl || '');
+          setSyncApiSecret(parsed.apiSecret || '');
+        }
       }, []);
 
       // Salvar dados
@@ -338,6 +357,10 @@
       useEffect(() => {
         localStorage.setItem(TEAM_KEY, JSON.stringify(teamMembers));
       }, [teamMembers]);
+
+      useEffect(() => {
+        localStorage.setItem(TEAM_EMAILS_KEY, JSON.stringify(teamEmails));
+      }, [teamEmails]);
 
       const calendarData = useMemo(() => buildCalendarData(eventDB), [eventDB]);
       const currentMonthData = calendarData[currentMonthIndex];
@@ -442,6 +465,64 @@
         setTeamMembers(teamMembers.filter(m => m !== member));
       };
 
+      const handleMemberEmailChange = (member, email) => {
+        setTeamEmails(prev => ({ ...prev, [member]: email }));
+      };
+
+      const saveSyncConfig = (apiUrl, apiSecret) => {
+        setSyncApiUrl(apiUrl);
+        setSyncApiSecret(apiSecret);
+        localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify({ apiUrl, apiSecret }));
+        setShowSyncConfigModal(false);
+      };
+
+      const syncWithGoogleCalendar = async () => {
+        if (!syncApiUrl) {
+          setShowSyncConfigModal(true);
+          return;
+        }
+
+        setSyncing(true);
+        setSyncResult(null);
+
+        try {
+          const baseUrl = syncApiUrl.replace(/\/$/, '');
+
+          const emailsResponse = await fetch(`${baseUrl}/api/team-emails`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-secret': syncApiSecret },
+            body: JSON.stringify({
+              members: teamMembers.map(name => ({ name, email: teamEmails[name] || '' }))
+            })
+          });
+          if (!emailsResponse.ok) {
+            const err = await emailsResponse.json().catch(() => ({}));
+            throw new Error(err.message || `Falha ao salvar e-mails da equipe (HTTP ${emailsResponse.status})`);
+          }
+
+          const syncResponse = await fetch(`${baseUrl}/api/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-secret': syncApiSecret },
+            body: JSON.stringify({ eventDB })
+          });
+
+          const data = await syncResponse.json().catch(() => ({}));
+
+          if (!syncResponse.ok) {
+            if (data.error === 'google_reauth_required') {
+              throw new Error('O acesso ao Google Agenda expirou. Peça para reautorizar em /api/oauth/start.');
+            }
+            throw new Error(data.message || `Falha na sincronização (HTTP ${syncResponse.status})`);
+          }
+
+          setSyncResult({ ok: true, ...data });
+        } catch (err) {
+          setSyncResult({ ok: false, message: err.message });
+        } finally {
+          setSyncing(false);
+        }
+      };
+
       const exportToPDF = () => exportMonthToPDF(currentMonthData, MONTHS[currentMonthIndex], dashboardStats.totalPosts);
 
       const openWhatsAppModal = () => {
@@ -516,6 +597,12 @@
               </button>
               <button onClick={exportData} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
                 <IconDownload className="w-4 h-4" /> Exportar Dados
+              </button>
+              <button onClick={syncWithGoogleCalendar} disabled={syncing} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
+                <IconCalendar className="w-4 h-4" /> {syncing ? 'Sincronizando...' : 'Sincronizar com Google Agenda'}
+              </button>
+              <button onClick={() => setShowSyncConfigModal(true)} className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors text-sm font-medium border border-slate-200" title="Configurar sincronização">
+                <IconEdit3 className="w-4 h-4" />
               </button>
               <button onClick={openWhatsAppModal} className="flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#1ebd5a] text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
                 <IconMessageCircle className="w-4 h-4" /> Pauta WhatsApp
@@ -650,7 +737,7 @@
           {/* MODAL DE EQUIPE */}
           {showTeamModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
                     <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
                         <h3 className="font-bold text-lg text-slate-800">Membros da Equipe</h3>
                         <button onClick={() => setShowTeamModal(false)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full"><IconX className="w-5 h-5" /></button>
@@ -660,14 +747,92 @@
                             <input type="text" placeholder="Novo membro..." value={newMemberName} onChange={e => setNewMemberName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
                             <button type="submit" disabled={!newMemberName.trim()} className="bg-slate-800 text-white px-3 py-2 rounded-lg disabled:opacity-50"><IconPlus className="w-5 h-5" /></button>
                         </form>
-                        <div className="max-h-60 overflow-y-auto space-y-2">
+                        <p className="text-xs text-slate-400 mb-2">O e-mail é usado para convidar a pessoa nos eventos do Google Agenda ao sincronizar.</p>
+                        <div className="max-h-72 overflow-y-auto space-y-2">
                             {teamMembers.map((member, i) => (
-                                <div key={i} className="flex justify-between items-center p-2 bg-slate-50 border border-slate-100 rounded-lg">
-                                    <span className="text-sm font-medium text-slate-700 flex items-center gap-2"><IconUser className="w-4 h-4 text-slate-400"/> {member}</span>
-                                    <button onClick={() => handleRemoveMember(member)} className="text-red-400 hover:text-red-600 p-1"><IconTrash2 className="w-4 h-4" /></button>
+                                <div key={i} className="p-2 bg-slate-50 border border-slate-100 rounded-lg space-y-1">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-slate-700 flex items-center gap-2"><IconUser className="w-4 h-4 text-slate-400"/> {member}</span>
+                                        <button onClick={() => handleRemoveMember(member)} className="text-red-400 hover:text-red-600 p-1"><IconTrash2 className="w-4 h-4" /></button>
+                                    </div>
+                                    <input
+                                        type="email"
+                                        placeholder="email@serrajr.com.br"
+                                        value={teamEmails[member] || ''}
+                                        onChange={(e) => handleMemberEmailChange(member, e.target.value)}
+                                        className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs"
+                                    />
                                 </div>
                             ))}
                         </div>
+                    </div>
+                </div>
+            </div>
+          )}
+
+          {/* MODAL DE CONFIGURAÇÃO DE SINCRONIZAÇÃO */}
+          {showSyncConfigModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+                    <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
+                        <h3 className="font-bold text-lg text-slate-800">Configurar Sincronização</h3>
+                        <button onClick={() => setShowSyncConfigModal(false)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full"><IconX className="w-5 h-5" /></button>
+                    </div>
+                    <form
+                        className="p-5 space-y-4"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            const form = e.target;
+                            saveSyncConfig(form.apiUrl.value.trim(), form.apiSecret.value.trim());
+                        }}
+                    >
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">URL do backend (Vercel)</label>
+                            <input name="apiUrl" type="url" placeholder="https://cronograma-serrajr-api.vercel.app" defaultValue={syncApiUrl} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Admin Secret</label>
+                            <input name="apiSecret" type="password" placeholder="mesmo valor de ADMIN_SYNC_SECRET" defaultValue={syncApiSecret} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <button type="submit" className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl transition-colors text-sm shadow-md">
+                            Salvar
+                        </button>
+                    </form>
+                </div>
+            </div>
+          )}
+
+          {/* MODAL DE RESULTADO DA SINCRONIZAÇÃO */}
+          {syncResult && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+                    <div className={`flex justify-between items-center p-5 border-b border-slate-100 ${syncResult.ok ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                        <h3 className={`font-bold text-lg ${syncResult.ok ? 'text-emerald-700' : 'text-red-700'}`}>
+                            {syncResult.ok ? 'Sincronização concluída' : 'Falha na sincronização'}
+                        </h3>
+                        <button onClick={() => setSyncResult(null)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full"><IconX className="w-5 h-5" /></button>
+                    </div>
+                    <div className="p-5 text-sm text-slate-700 space-y-2">
+                        {syncResult.ok ? (
+                            <>
+                                <p>Criados: <strong>{syncResult.created}</strong></p>
+                                <p>Atualizados: <strong>{syncResult.updated}</strong></p>
+                                <p>Excluídos: <strong>{syncResult.deleted}</strong></p>
+                                {syncResult.skipped && syncResult.skipped.length > 0 && (
+                                    <p className="text-amber-600">Sem e-mail cadastrado: {syncResult.skipped.join(', ')}</p>
+                                )}
+                                {syncResult.failed && syncResult.failed.length > 0 && (
+                                    <div className="text-red-600">
+                                        <p className="font-semibold">Falhas:</p>
+                                        <ul className="list-disc pl-5">
+                                            {syncResult.failed.map((f, i) => <li key={i}>{f.dateKey} ({f.action}): {f.message}</li>)}
+                                        </ul>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <p className="text-red-600">{syncResult.message}</p>
+                        )}
                     </div>
                 </div>
             </div>

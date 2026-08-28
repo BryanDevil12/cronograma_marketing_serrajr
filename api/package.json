@@ -1,0 +1,10 @@
+{
+  "name": "cronograma-marketing-serrajr-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend serverless (Vercel) para sincronizar o cronograma de marketing da Serra Jr. com o Google Agenda.",
+  "dependencies": {
+    "googleapis": "^144.0.0",
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}
