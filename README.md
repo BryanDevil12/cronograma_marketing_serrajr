@@ -7,7 +7,7 @@ Dashboard web para planejar e acompanhar o cronograma mensal de conteúdo dos as
 Um calendário anual (2026) onde cada dia pode receber um ou mais eventos de conteúdo — posts de feed, stories, vídeos, publicações no LinkedIn, TikTok, YouTube, X, aniversários e observações internas. Para cada evento é possível registrar:
 
 - Tipo de conteúdo (com ícone e cor própria)
-- Responsável (membro da equipe)
+- Responsável (quem produz) e Revisor (quem corrige)
 - Detalhes/descrição
 - Visualizações e engajamento (para acompanhar performance após a publicação)
 
@@ -31,6 +31,7 @@ Os dados ficam salvos no `localStorage` do navegador, então as alterações fei
 - (Admin) Gerenciar a lista de assessores da equipe
 - Ocultar dias sem eventos
 - Exportar relatórios em PDF
+- Gerar mensagem formatada para enviar a pauta do mês no grupo do WhatsApp
 
 ## Publicar via GitHub Pages
 
