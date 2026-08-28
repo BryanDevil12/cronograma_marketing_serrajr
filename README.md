@@ -11,19 +11,24 @@ Um calendário anual (2026) onde cada dia pode receber um ou mais eventos de con
 - Detalhes/descrição
 - Visualizações e engajamento (para acompanhar performance após a publicação)
 
-O dashboard também mostra estatísticas do mês (total de posts, visualizações e engajamento) e permite gerenciar a equipe de assessores.
+O dashboard também mostra estatísticas do mês (total de posts, visualizações e engajamento). O calendário sempre abre no mês atual.
+
+## Páginas
+
+- **[index.html](index.html)** — visualização pública, somente leitura. É o que a equipe usa para consultar a pauta do mês.
+- **[admin.html](admin.html)** — área administrativa protegida por senha, usada para criar/editar/excluir eventos, gerenciar os membros da equipe e exportar os dados atualizados.
 
 ## Como usar
 
-Basta abrir o arquivo [index.html](index.html) em qualquer navegador — é uma aplicação React standalone, sem necessidade de instalação, build ou servidor. Todas as bibliotecas (React, Tailwind, jsPDF) são carregadas via CDN.
+Basta abrir o arquivo desejado em qualquer navegador — é uma aplicação React standalone, sem necessidade de instalação, build ou servidor. Todas as bibliotecas (React, Tailwind, jsPDF) são carregadas via CDN.
 
-Os dados ficam salvos no `localStorage` do navegador, então as alterações persistem apenas no computador/navegador onde foram feitas.
+Os dados ficam salvos no `localStorage` do navegador, então as alterações feitas no admin persistem apenas no computador/navegador onde foram feitas. Para publicar as mudanças para todos, use o botão **Exportar Dados** no admin e atualize o bloco `rawInitialDB` / `defaultTeamMembers` no início do `<script>` de ambos os arquivos, depois faça commit.
 
 ### Funcionalidades principais
 
-- Navegação mês a mês pelo calendário de 2026
-- Adicionar, editar e excluir eventos por dia
-- Gerenciar a lista de assessores da equipe
+- Navegação mês a mês pelo calendário de 2026, abrindo automaticamente no mês atual
+- (Admin) Adicionar, editar e excluir eventos por dia
+- (Admin) Gerenciar a lista de assessores da equipe
 - Ocultar dias sem eventos
 - Exportar relatórios em PDF
 
