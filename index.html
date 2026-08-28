@@ -48,21 +48,6 @@
     const defaultTeamMembers = ['Lorena', 'Bryan', 'Luis', 'João', 'Rafael', 'Emilly', 'Victor'];
 
     const rawInitialDB = {
-      "02-03": [{ type: "birthday", title: "Aniversário: Paulo Ricardo Ganer" }, { type: "observacao", title: "Primeira reunião do ano" }],
-      "02-18": [{ type: "feed", title: "Texto destaque David", responsible: "Lorena" }],
-      "02-27": [{ type: "feed", title: "Curiosidades (Carnaval)", responsible: "Bryan" }],
-      "03-04": [{ type: "linkedin", title: "Dia Mundial da Engenharia" }],
-      "03-14": [{ type: "tiktok", title: "Dia do Pi (3,14) - Curiosidades" }],
-      "03-24": [{ type: "youtube", title: "Ferramenta da Semana (VSCode)" }],
-      "03-26": [{ type: "feed", title: "Serra Explica (Comp)" }],
-      "04-04": [{ type: "x", title: "Serra Indica (Comp) - Thread" }],
-      "04-10": [{ type: "feed", title: "Quem somos nós? (PS)" }, { type: "story", title: "Dia da Engenharia" }],
-      "04-23": [{ type: "youtube", title: "Áreas de atuação (Comp)" }],
-      "05-05": [{ type: "video", title: "Membros Serra Jr." }],
-      "05-23": [{ type: "tiktok", title: "Serra Explica (Mecânica)" }],
-      "06-04": [{ type: "feed", title: "Serra Inspira" }],
-      "06-05": [{ type: "story", title: "Áreas de atuação (Mecânica)" }, { type: "observacao", title: "Dia do Eng. Mecânico" }],
-      "06-20": [{ type: "feed", title: "Serra Indica (Mec)" }],
       "08-06": [{ type: "linkedin", title: "Dia Nacional dos Profissionais da Educação" }],
       "08-11": [{ type: "story", title: "Dia do Estudante" }],
       "08-12": [{ type: "story", title: "Dia Internacional da Juventude" }],
@@ -115,8 +100,13 @@
       }
     };
 
+    const getCurrentMonthIndex = () => {
+      const now = new Date();
+      return now.getFullYear() === 2026 ? now.getMonth() : 0;
+    };
+
     function App() {
-      const [currentMonthIndex, setCurrentMonthIndex] = useState(0);
+      const [currentMonthIndex, setCurrentMonthIndex] = useState(getCurrentMonthIndex);
       const [eventDB, setEventDB] = useState(initialEventDB);
       
       const [teamMembers, setTeamMembers] = useState(defaultTeamMembers);
@@ -140,7 +130,7 @@
 
       // Carregar dados guardados
       useEffect(() => {
-        const savedDB = localStorage.getItem('serraJrMarketingDB2026_v6');
+        const savedDB = localStorage.getItem('serraJrMarketingDB2026_v7');
         if (savedDB) setEventDB(JSON.parse(savedDB));
         else setEventDB(initialEventDB);
 
@@ -150,7 +140,7 @@
 
       // Guardar dados
       useEffect(() => {
-        localStorage.setItem('serraJrMarketingDB2026_v6', JSON.stringify(eventDB));
+        localStorage.setItem('serraJrMarketingDB2026_v7', JSON.stringify(eventDB));
       }, [eventDB]);
 
       useEffect(() => {
