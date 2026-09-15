@@ -33,6 +33,16 @@ function buildEventResource(dateKey, ev, attendeeEmails) {
     start: { date: startDate },
     end: { date: endDate },
     attendees: attendeeEmails.map((email) => ({ email })),
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'notification', minutes: 48 * 60, description: 'PRAZO PRA ENVIAR PRA REVISÃO' },
+        { method: 'notification', minutes: 24 * 60 },
+        { method: 'notification', minutes: 8 * 60 },
+        { method: 'notification', minutes: 4 * 60 },
+        { method: 'notification', minutes: 0 }
+      ]
+    }
   };
 }
 
