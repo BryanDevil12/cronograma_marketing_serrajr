@@ -32,8 +32,7 @@ async function resolveAttendeeEmails(supabase, names) {
 
   const { data, error } = await supabase
     .from('team_members')
-    .select('name, email')
-    .in('name', uniqueNames);
+    .select('name, email');
 
   if (error) throw new Error(`Falha ao buscar e-mails da equipe: ${error.message}`);
 
