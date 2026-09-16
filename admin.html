@@ -570,7 +570,7 @@
 
       const copyAIPrompt = () => {
         if (!newEventTitle.trim()) return;
-        const prompt = `Sou da equipe de marketing da Serra Jr. Engenharia (empresa júnior de engenharia mecânica). Preciso de uma sugestão de pauta/direcionamento para o seguinte post:\n\nPlataforma: ${getTypeLabel(newEventType)}\nTítulo: ${newEventTitle.trim()}\n\nMe dê uma sugestão curta (2-4 frases) de ideia/roteiro/direcionamento criativo para esse post, em português, tom profissional mas jovem.`;
+        const prompt = `Sou da equipe de marketing da Serra Jr. Engenharia, empresa júnior de engenharia mecânica e engenharia de computação. Preciso de uma pauta/direcionamento para o seguinte post:\n\nPlataforma: ${getTypeLabel(newEventType)}\nTítulo: ${newEventTitle.trim()}\n\nNosso estilo visual atual: cerca de 60% imagens reais ou renders 3D (visual profissional, tipo propaganda de grande empresa) e 40% texto, priorizando tópicos curtos em vez de texto corrido, para o lead conseguir "escanear" a publicação rapidamente.\n\nMe dê um direcionamento detalhado explicando como esse post deveria ser criado:\n- Ideia central e ângulo da abordagem\n- Sugestão de imagem/render (o que mostrar, estilo)\n- Exemplo de 2-3 tópicos que poderiam aparecer na arte (como sugestão de tom e formato, não texto final)\n- Direção da legenda (o que ela deveria comunicar, sem escrever a legenda pronta)\n\nEm português, direto ao ponto, sem explicar teoria de design.`;
         navigator.clipboard.writeText(prompt).then(() => {
           setPromptCopied(true);
           setTimeout(() => setPromptCopied(false), 2000);
@@ -967,7 +967,7 @@
                             {promptCopied ? 'Prompt copiado!' : 'Copiar prompt para IA'}
                           </button>
                         </div>
-                        <textarea placeholder="Referência, roteiro, ideias de arte..." value={newEventDetails} onChange={(e) => setNewEventDetails(e.target.value)} rows="2" className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#04add7] resize-none"></textarea>
+                        <textarea placeholder="Referência, roteiro, ideias de arte..." value={newEventDetails} onChange={(e) => setNewEventDetails(e.target.value)} rows="6" className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#04add7] resize-y"></textarea>
                         <p className="text-[10px] text-slate-400 mt-1">Cole o prompt no claude.ai ou ChatGPT, e cole a resposta aqui.</p>
                       </div>
 
