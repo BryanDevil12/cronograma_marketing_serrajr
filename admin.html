@@ -174,7 +174,6 @@
 
     const EVENT_DB_KEY = 'serraJrMarketingDB2026_v8';
     const TEAM_KEY = 'serraJrTeam2026';
-    const TEAM_EMAILS_KEY = 'serraJrTeamEmails2026';
     const SYNC_CONFIG_KEY = 'serraJrSyncConfig2026';
     const ADMIN_SESSION_KEY = 'serraJrAdminSession';
     const ADMIN_PASSWORD = 'serrajr2026';
@@ -361,7 +360,6 @@
       const [whatsappMessage, setWhatsappMessage] = useState('');
       const [copied, setCopied] = useState(false);
 
-      const [teamEmails, setTeamEmails] = useState({});
       const [showSyncConfigModal, setShowSyncConfigModal] = useState(false);
       const [syncApiUrl, setSyncApiUrl] = useState('');
       const [syncApiSecret, setSyncApiSecret] = useState('');
@@ -388,9 +386,6 @@
         const savedTeam = localStorage.getItem(TEAM_KEY);
         if (savedTeam) setTeamMembers(JSON.parse(savedTeam));
 
-        const savedEmails = localStorage.getItem(TEAM_EMAILS_KEY);
-        if (savedEmails) setTeamEmails(JSON.parse(savedEmails));
-
         const savedSyncConfig = localStorage.getItem(SYNC_CONFIG_KEY);
         if (savedSyncConfig) {
           const parsed = JSON.parse(savedSyncConfig);
@@ -407,10 +402,6 @@
       useEffect(() => {
         localStorage.setItem(TEAM_KEY, JSON.stringify(teamMembers));
       }, [teamMembers]);
-
-      useEffect(() => {
-        localStorage.setItem(TEAM_EMAILS_KEY, JSON.stringify(teamEmails));
-      }, [teamEmails]);
 
       const calendarData = useMemo(() => buildCalendarData(eventDB), [eventDB]);
       const currentMonthData = calendarData[currentMonthIndex];
@@ -508,10 +499,6 @@
         setTeamMembers(teamMembers.filter(m => m !== member));
       };
 
-      const handleMemberEmailChange = (member, email) => {
-        setTeamEmails(prev => ({ ...prev, [member]: email }));
-      };
-
       const saveSyncConfig = (apiUrl, apiSecret) => {
         setSyncApiUrl(apiUrl);
         setSyncApiSecret(apiSecret);
@@ -531,11 +518,14 @@
         try {
           const baseUrl = syncApiUrl.replace(/\/$/, '');
 
+          // Não envia e-mail aqui: e-mails são gerenciados só no Supabase agora,
+          // para não sobrescrever com vazio ao sincronizar de outro navegador/perfil.
+          // Isso ainda garante que nomes novos da equipe existam na tabela team_members.
           const emailsResponse = await fetch(`${baseUrl}/api/team-emails`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'x-admin-secret': syncApiSecret },
             body: JSON.stringify({
-              members: teamMembers.map(name => ({ name, email: teamEmails[name] || '' }))
+              members: teamMembers.map(name => ({ name }))
             })
           });
           if (!emailsResponse.ok) {
@@ -781,21 +771,14 @@
                             <input type="text" placeholder="Novo membro..." value={newMemberName} onChange={e => setNewMemberName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
                             <button type="submit" disabled={!newMemberName.trim()} className="bg-slate-800 text-white px-3 py-2 rounded-lg disabled:opacity-50"><IconPlus className="w-5 h-5" /></button>
                         </form>
-                        <p className="text-xs text-slate-400 mb-2">O e-mail é usado para convidar a pessoa nos eventos do Google Agenda ao sincronizar.</p>
+                        <p className="text-xs text-slate-400 mb-2">O e-mail de cada membro (usado para convidar nos eventos do Google Agenda) é gerenciado direto na tabela team_members do Supabase.</p>
                         <div className="max-h-72 overflow-y-auto space-y-2">
                             {teamMembers.map((member, i) => (
-                                <div key={i} className="p-2 bg-slate-50 border border-slate-100 rounded-lg space-y-1">
+                                <div key={i} className="p-2 bg-slate-50 border border-slate-100 rounded-lg">
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm font-medium text-slate-700 flex items-center gap-2"><IconUser className="w-4 h-4 text-slate-400"/> {member}</span>
                                         <button onClick={() => handleRemoveMember(member)} className="text-red-400 hover:text-red-600 p-1"><IconTrash2 className="w-4 h-4" /></button>
                                     </div>
-                                    <input
-                                        type="email"
-                                        placeholder="email@serrajr.com.br"
-                                        value={teamEmails[member] || ''}
-                                        onChange={(e) => handleMemberEmailChange(member, e.target.value)}
-                                        className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs"
-                                    />
                                 </div>
                             ))}
                         </div>
