@@ -17,7 +17,8 @@ function nextDayISODate(isoDate) {
 
 function buildEventDescription(ev) {
   const lines = [];
-  if (ev.responsible) lines.push(`Responsável: ${ev.responsible}`);
+  const responsibles = [ev.responsible, ev.responsible2].filter(Boolean).join(' + ');
+  if (responsibles) lines.push(`Responsável: ${responsibles}`);
   if (ev.reviewer) lines.push(`Revisor: ${ev.reviewer}`);
   if (ev.details) lines.push('', ev.details);
   return lines.join('\n');
@@ -38,8 +39,6 @@ function buildEventResource(dateKey, ev, attendeeEmails) {
       overrides: [
         { method: 'popup', minutes: 48 * 60 },
         { method: 'popup', minutes: 24 * 60 },
-        { method: 'popup', minutes: 8 * 60 },
-        { method: 'popup', minutes: 4 * 60 },
         { method: 'popup', minutes: 0 }
       ]
     }

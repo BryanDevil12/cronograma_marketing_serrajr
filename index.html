@@ -19,8 +19,25 @@
 
   <!-- Babel (traduz JSX no navegador) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='500' viewBox='0 0 900 500'%3E%3Cg fill='%23001830' fill-opacity='0.05' font-family='Arial, sans-serif' font-weight='800' font-size='24'%3E%3Ctext x='60' y='80' transform='rotate(-8 60 80)'%3Efaz o m%3C/text%3E%3Ctext x='420' y='60' transform='rotate(-8 420 60)'%3Ebora postar%3C/text%3E%3Ctext x='120' y='190' transform='rotate(-8 120 190)'%3Emarketing não para%3C/text%3E%3Ctext x='600' y='170' transform='rotate(-8 600 170)'%3Eengaja%3C/text%3E%3Ctext x='60' y='300' transform='rotate(-8 60 300)'%3Epublica logo%3C/text%3E%3Ctext x='450' y='290' transform='rotate(-8 450 290)'%3Efaz o m%3C/text%3E%3Ctext x='140' y='410' transform='rotate(-8 140 410)'%3Ecriatividade não tem prazo%3C/text%3E%3Ctext x='620' y='400' transform='rotate(-8 620 400)'%3Ebora postar%3C/text%3E%3C/g%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 900px 500px;
+      animation: bg-scroll 60s linear infinite;
+    }
+    @keyframes bg-scroll {
+      from { background-position: 0 0; }
+      to { background-position: 900px 500px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body { animation: none; }
+    }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans">
+<body class="text-slate-800 font-sans">
   <div id="root"></div>
 
   <script type="text/babel">
@@ -44,6 +61,20 @@
 
     // --- BASE DE DADOS INICIAL ---
     const generateId = () => Math.random().toString(36).substr(2, 9);
+
+    // Migra tipos antigos para a nova lista de plataformas
+    const TYPE_MIGRATION = {
+      feed: 'instagram-feed',
+      story: 'instagram-story',
+      video: 'video-generico',
+      x: 'observacao',
+      birthday: 'aniversario',
+      observacao: 'observacao',
+      linkedin: 'linkedin',
+      tiktok: 'tiktok',
+      youtube: 'youtube',
+    };
+    const migrateType = (type) => TYPE_MIGRATION[type] || type;
 
     const rawInitialDB = {
       "08-06": [{ type: "linkedin", title: "Dia Nacional dos Profissionais da Educação" }],
@@ -86,26 +117,38 @@
     Object.keys(rawInitialDB).forEach(key => {
       initialEventDB[key] = rawInitialDB[key].map(ev => ({
         id: generateId(),
-        type: ev.type,
+        type: migrateType(ev.type),
         title: ev.title,
         responsible: ev.responsible || '',
+        responsible2: '',
         reviewer: ev.reviewer || '',
         details: ev.details || '',
-        views: '',
-        engagement: ''
       }));
     });
 
+    const TYPE_LABELS = {
+      'linkedin': 'LinkedIn',
+      'instagram-feed': 'Instagram Feed',
+      'instagram-reels': 'Instagram Reels',
+      'instagram-story': 'Instagram Story',
+      'tiktok': 'TikTok',
+      'youtube': 'YouTube',
+      'aniversario': 'Aniversário',
+      'video-generico': 'Vídeo (Gravação)',
+      'observacao': 'Observação Interna',
+    };
+    const getTypeLabel = (type) => TYPE_LABELS[type] || type.toUpperCase();
+
     const getBadgeStyle = (type) => {
       switch (type) {
-        case 'birthday': return 'bg-pink-100 text-pink-700 border-pink-200';
-        case 'feed': return 'bg-blue-100 text-blue-700 border-blue-200';
-        case 'story': return 'bg-purple-100 text-purple-700 border-purple-200';
-        case 'linkedin': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-        case 'video': return 'bg-red-100 text-red-700 border-red-200';
+        case 'aniversario': return 'bg-pink-100 text-pink-700 border-pink-200';
+        case 'instagram-feed': return 'bg-blue-100 text-blue-700 border-blue-200';
+        case 'instagram-reels': return 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200';
+        case 'instagram-story': return 'bg-purple-100 text-purple-700 border-purple-200';
+        case 'linkedin': return 'bg-sky-100 text-sky-700 border-sky-200';
+        case 'video-generico': return 'bg-orange-100 text-orange-700 border-orange-200';
         case 'youtube': return 'bg-red-600 text-white border-red-700';
         case 'tiktok': return 'bg-slate-800 text-white border-slate-900';
-        case 'x': return 'bg-slate-900 text-white border-black';
         case 'observacao': return 'bg-amber-100 text-amber-800 border-amber-200';
         default: return 'bg-gray-100 text-gray-700 border-gray-200';
       }
@@ -113,14 +156,14 @@
 
     const getEventIcon = (type) => {
       switch (type) {
-        case 'birthday': return '🎂';
-        case 'feed': return '📱';
-        case 'story': return '🤳';
+        case 'aniversario': return '🎂';
+        case 'instagram-feed': return '📱';
+        case 'instagram-reels': return '🎬';
+        case 'instagram-story': return '🤳';
         case 'linkedin': return '💼';
-        case 'video': return '▶️';
+        case 'video-generico': return '🎥';
         case 'youtube': return '🟥';
         case 'tiktok': return '🎵';
-        case 'x': return '𝕏';
         case 'observacao': return '📌';
         default: return '📝';
       }
@@ -139,7 +182,17 @@
 
     const loadEventDB = () => {
       const saved = localStorage.getItem(EVENT_DB_KEY);
-      return saved ? JSON.parse(saved) : initialEventDB;
+      if (!saved) return initialEventDB;
+      const parsed = JSON.parse(saved);
+      const migrated = {};
+      Object.keys(parsed).forEach(key => {
+        migrated[key] = parsed[key].map(ev => ({
+          ...ev,
+          type: migrateType(ev.type),
+          responsible2: ev.responsible2 || '',
+        }));
+      });
+      return migrated;
     };
 
     const buildCalendarData = (eventDB) => {
@@ -180,19 +233,14 @@
       currentMonthData.forEach(day => {
         if (day.hasEvents) {
           day.events.forEach(ev => {
-            let metricText = '';
-            if (ev.views || ev.engagement) {
-              metricText = `Views: ${ev.views || 0} | Interações: ${ev.engagement || 0}`;
-            }
-            let respRev = ev.responsible || '-';
-            if (ev.reviewer) respRev += `\n(Rev: ${ev.reviewer})`;
+            let resp = [ev.responsible, ev.responsible2].filter(Boolean).join(' + ') || '-';
+            if (ev.reviewer) resp += `\n(Rev: ${ev.reviewer})`;
             tableData.push([
               day.dateStr,
-              ev.type.toUpperCase(),
+              getTypeLabel(ev.type),
               ev.title,
-              respRev,
+              resp,
               ev.details || '-',
-              metricText || '-'
             ]);
           });
         }
@@ -202,10 +250,10 @@
 
       doc.autoTable({
         startY: 28,
-        head: [['Data', 'Plataforma', 'Título', 'Responsável/Revisor', 'Detalhes', 'Resultados']],
+        head: [['Data', 'Plataforma', 'Título', 'Responsável/Revisor', 'Detalhes']],
         body: tableData,
         styles: { fontSize: 9, cellPadding: 3 },
-        headStyles: { fillColor: [15, 23, 42] },
+        headStyles: { fillColor: [0, 24, 48] },
       });
 
       doc.save(`marketing-serrajr-${monthName.toLowerCase()}-2026.pdf`);
@@ -218,14 +266,15 @@
 
       currentMonthData.forEach(day => {
         if (day.hasEvents) {
-          const tasksForDay = day.events.filter(ev => ev.type !== 'birthday' && ev.type !== 'observacao' && ev.responsible);
+          const tasksForDay = day.events.filter(ev => ev.type !== 'aniversario' && ev.type !== 'observacao' && ev.responsible);
 
           if (tasksForDay.length > 0) {
             hasTasks = true;
             message += `*🗓️ ${day.dateStr} (${day.dayOfWeek})*\n`;
             tasksForDay.forEach(ev => {
-              message += `👉 *${ev.type.toUpperCase()}* | ${ev.title}\n`;
-              message += `👤 Faz: @${ev.responsible}\n`;
+              message += `👉 *${getTypeLabel(ev.type)}* | ${ev.title}\n`;
+              const doers = [ev.responsible, ev.responsible2].filter(Boolean).map(n => `@${n}`).join(' e ');
+              message += `👤 Faz: ${doers}\n`;
               if (ev.reviewer) {
                 message += `👀 Revisor: @${ev.reviewer}\n`;
               }
@@ -266,19 +315,15 @@
 
       const dashboardStats = useMemo(() => {
         let totalPosts = 0;
-        let totalViews = 0;
-        let totalEngagement = 0;
 
         currentMonthData.forEach(day => {
           day.events.forEach(ev => {
-            if (ev.type !== 'birthday' && ev.type !== 'observacao') {
+            if (ev.type !== 'aniversario' && ev.type !== 'observacao') {
               totalPosts++;
-              totalViews += Number(ev.views) || 0;
-              totalEngagement += Number(ev.engagement) || 0;
             }
           });
         });
-        return { totalPosts, totalViews, totalEngagement };
+        return { totalPosts };
       }, [currentMonthData]);
 
       const handlePrevMonth = () => setCurrentMonthIndex((prev) => (prev > 0 ? prev - 1 : 11));
@@ -321,66 +366,52 @@
       };
 
       return (
-        <div className="min-h-screen bg-slate-100 text-slate-800 font-sans p-4 md:p-8">
+        <div className="min-h-screen text-slate-800 font-sans p-4 md:p-8">
           {/* HEADER */}
-          <div className="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3 whitespace-nowrap">
-                <img src="logo2.png" alt="Serra Jr." className="w-10 h-10 object-contain shrink-0" />
+          <div className="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center bg-[#001830] p-4 md:p-6 rounded-2xl shadow-sm">
+            <div className="w-full md:w-auto">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2 md:gap-3">
+                <img src="logo.png" alt="Serra Jr." className="w-7 h-7 md:w-10 md:h-10 object-contain shrink-0" />
                 <span>Marketing Studio 2026</span>
               </h1>
-              <p className="text-slate-500 mt-1 font-medium">Serra Jr. Engenharia</p>
+              <p className="text-white/60 mt-1 font-medium">Serra Jr. Engenharia</p>
             </div>
             <div className="mt-6 md:mt-0 flex gap-3 flex-wrap justify-end">
               <button onClick={openWhatsAppModal} className="flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#1ebd5a] text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
                 <IconMessageCircle className="w-4 h-4" /> Pauta WhatsApp
               </button>
-              <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
+              <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2 bg-[#04add7] hover:bg-[#039bc0] text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
                 <IconDownload className="w-4 h-4" /> Relatório PDF
               </button>
             </div>
           </div>
 
           {/* DASHBOARD */}
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="p-3 bg-blue-100 text-blue-600 rounded-lg"><IconCalendar className="w-6 h-6" /></div>
+          <div className="max-w-6xl mx-auto mb-8">
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 max-w-xs">
+                <div className="p-3 bg-[#04add7]/10 text-[#04add7] rounded-lg"><IconCalendar className="w-6 h-6" /></div>
                 <div>
                     <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Posts em {MONTHS[currentMonthIndex]}</p>
                     <p className="text-2xl font-bold text-slate-800">{dashboardStats.totalPosts}</p>
                 </div>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 text-emerald-600 rounded-lg"><IconEye className="w-6 h-6" /></div>
-                <div>
-                    <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Visualizações Mensais</p>
-                    <p className="text-2xl font-bold text-slate-800">{dashboardStats.totalViews.toLocaleString('pt-BR')}</p>
-                </div>
-            </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="p-3 bg-pink-100 text-pink-600 rounded-lg"><IconHeart className="w-6 h-6" /></div>
-                <div>
-                    <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Interações / Engajamento</p>
-                    <p className="text-2xl font-bold text-slate-800">{dashboardStats.totalEngagement.toLocaleString('pt-BR')}</p>
-                </div>
-            </div>
           </div>
 
           {/* CONTROLES DO CALENDÁRIO */}
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between mb-4 bg-slate-800 text-white p-3 rounded-xl shadow-md gap-4 md:gap-0">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between mb-4 bg-[#001830] text-white p-3 rounded-xl shadow-md gap-4 md:gap-0">
             <div className="flex items-center justify-between w-full md:w-auto">
-                <button onClick={handlePrevMonth} className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                <button onClick={handlePrevMonth} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                 <IconChevronLeft className="w-6 h-6" />
                 </button>
                 <h2 className="text-2xl font-bold text-center uppercase tracking-widest w-64">
                 {MONTHS[currentMonthIndex]}
                 </h2>
-                <button onClick={handleNextMonth} className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                <button onClick={handleNextMonth} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                 <IconChevronRight className="w-6 h-6" />
                 </button>
             </div>
 
-            <button onClick={() => setHideEmptyDays(!hideEmptyDays)} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm font-medium w-full md:w-auto justify-center">
+            <button onClick={() => setHideEmptyDays(!hideEmptyDays)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium w-full md:w-auto justify-center">
                 {hideEmptyDays ? <IconEye className="w-4 h-4" /> : <IconEyeOff className="w-4 h-4" />}
                 {hideEmptyDays ? "Mostrar todos os dias" : "Ocultar dias vazios"}
             </button>
@@ -414,9 +445,9 @@
                               <div>
                                 <span className="font-bold text-sm mb-1 block leading-tight">{getEventIcon(ev.type)} {ev.title}</span>
                                 <div className="mt-2 flex flex-col gap-0.5">
-                                  {ev.responsible && (
+                                  {(ev.responsible || ev.responsible2) && (
                                       <span className="text-[11px] font-semibold flex items-center gap-1 opacity-80">
-                                          <IconUser className="w-3 h-3" /> Faz: {ev.responsible}
+                                          <IconUser className="w-3 h-3" /> Faz: {[ev.responsible, ev.responsible2].filter(Boolean).join(' + ')}
                                       </span>
                                   )}
                                   {ev.reviewer && (
@@ -426,12 +457,6 @@
                                   )}
                                 </div>
                               </div>
-                              {(ev.views || ev.engagement) && (
-                                  <div className="mt-3 pt-2 border-t border-current/20 flex gap-3 text-xs font-semibold opacity-90">
-                                      {ev.views && <span title="Visualizações">👁️ {ev.views}</span>}
-                                      {ev.engagement && <span title="Interações">❤️ {ev.engagement}</span>}
-                                  </div>
-                              )}
                             </div>
                           ))
                       ) : (
@@ -467,15 +492,9 @@
                   {selectedDay.events.map(ev => (
                     <div key={ev.id} className={`p-3 rounded-lg border shadow-sm ${getBadgeStyle(ev.type)}`}>
                       <span className="font-bold text-sm block mb-1">{getEventIcon(ev.type)} {ev.title}</span>
-                      {ev.responsible && <span className="text-xs opacity-90 block mb-1">Faz: {ev.responsible}</span>}
+                      {(ev.responsible || ev.responsible2) && <span className="text-xs opacity-90 block mb-1">Faz: {[ev.responsible, ev.responsible2].filter(Boolean).join(' + ')}</span>}
                       {ev.reviewer && <span className="text-xs opacity-90 block mb-1">Rev: {ev.reviewer}</span>}
                       {ev.details && <span className="text-xs opacity-90 block">{ev.details}</span>}
-                      {(ev.views || ev.engagement) && (
-                        <div className="mt-2 pt-2 border-t border-current/20 flex gap-3 text-xs font-semibold opacity-90">
-                          {ev.views && <span title="Visualizações">👁️ {ev.views}</span>}
-                          {ev.engagement && <span title="Interações">❤️ {ev.engagement}</span>}
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>

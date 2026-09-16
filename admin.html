@@ -19,8 +19,25 @@
 
   <!-- Babel (traduz JSX no navegador) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='500' viewBox='0 0 900 500'%3E%3Cg fill='%23001830' fill-opacity='0.05' font-family='Arial, sans-serif' font-weight='800' font-size='24'%3E%3Ctext x='60' y='80' transform='rotate(-8 60 80)'%3Efaz o m%3C/text%3E%3Ctext x='420' y='60' transform='rotate(-8 420 60)'%3Ebora postar%3C/text%3E%3Ctext x='120' y='190' transform='rotate(-8 120 190)'%3Emarketing não para%3C/text%3E%3Ctext x='600' y='170' transform='rotate(-8 600 170)'%3Eengaja%3C/text%3E%3Ctext x='60' y='300' transform='rotate(-8 60 300)'%3Epublica logo%3C/text%3E%3Ctext x='450' y='290' transform='rotate(-8 450 290)'%3Efaz o m%3C/text%3E%3Ctext x='140' y='410' transform='rotate(-8 140 410)'%3Ecriatividade não tem prazo%3C/text%3E%3Ctext x='620' y='400' transform='rotate(-8 620 400)'%3Ebora postar%3C/text%3E%3C/g%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 900px 500px;
+      animation: bg-scroll 60s linear infinite;
+    }
+    @keyframes bg-scroll {
+      from { background-position: 0 0; }
+      to { background-position: 900px 500px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body { animation: none; }
+    }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans">
+<body class="text-slate-800 font-sans">
   <div id="root"></div>
 
   <script type="text/babel">
@@ -51,6 +68,21 @@
     const generateId = () => Math.random().toString(36).substr(2, 9);
 
     const defaultTeamMembers = ['Bryan', 'João', 'Gustavo', 'Ana Clara', 'Tábata', 'Ramom'];
+    const REVIEWERS = ['Bryan', 'João'];
+
+    // Migra tipos antigos para a nova lista de plataformas
+    const TYPE_MIGRATION = {
+      feed: 'instagram-feed',
+      story: 'instagram-story',
+      video: 'video-generico',
+      x: 'observacao',
+      birthday: 'aniversario',
+      observacao: 'observacao',
+      linkedin: 'linkedin',
+      tiktok: 'tiktok',
+      youtube: 'youtube',
+    };
+    const migrateType = (type) => TYPE_MIGRATION[type] || type;
 
     const rawInitialDB = {
       "08-06": [{ type: "linkedin", title: "Dia Nacional dos Profissionais da Educação" }],
@@ -93,26 +125,25 @@
     Object.keys(rawInitialDB).forEach(key => {
       initialEventDB[key] = rawInitialDB[key].map(ev => ({
         id: generateId(),
-        type: ev.type,
+        type: migrateType(ev.type),
         title: ev.title,
         responsible: ev.responsible || '',
+        responsible2: '',
         reviewer: ev.reviewer || '',
         details: ev.details || '',
-        views: '',
-        engagement: ''
       }));
     });
 
     const getBadgeStyle = (type) => {
       switch (type) {
-        case 'birthday': return 'bg-pink-100 text-pink-700 border-pink-200';
-        case 'feed': return 'bg-blue-100 text-blue-700 border-blue-200';
-        case 'story': return 'bg-purple-100 text-purple-700 border-purple-200';
-        case 'linkedin': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-        case 'video': return 'bg-red-100 text-red-700 border-red-200';
+        case 'aniversario': return 'bg-pink-100 text-pink-700 border-pink-200';
+        case 'instagram-feed': return 'bg-blue-100 text-blue-700 border-blue-200';
+        case 'instagram-reels': return 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200';
+        case 'instagram-story': return 'bg-purple-100 text-purple-700 border-purple-200';
+        case 'linkedin': return 'bg-sky-100 text-sky-700 border-sky-200';
+        case 'video-generico': return 'bg-orange-100 text-orange-700 border-orange-200';
         case 'youtube': return 'bg-red-600 text-white border-red-700';
         case 'tiktok': return 'bg-slate-800 text-white border-slate-900';
-        case 'x': return 'bg-slate-900 text-white border-black';
         case 'observacao': return 'bg-amber-100 text-amber-800 border-amber-200';
         default: return 'bg-gray-100 text-gray-700 border-gray-200';
       }
@@ -120,14 +151,14 @@
 
     const getEventIcon = (type) => {
       switch (type) {
-        case 'birthday': return '🎂';
-        case 'feed': return '📱';
-        case 'story': return '🤳';
+        case 'aniversario': return '🎂';
+        case 'instagram-feed': return '📱';
+        case 'instagram-reels': return '🎬';
+        case 'instagram-story': return '🤳';
         case 'linkedin': return '💼';
-        case 'video': return '▶️';
+        case 'video-generico': return '🎥';
         case 'youtube': return '🟥';
         case 'tiktok': return '🎵';
-        case 'x': return '𝕏';
         case 'observacao': return '📌';
         default: return '📝';
       }
@@ -168,6 +199,19 @@
       return data;
     };
 
+    const TYPE_LABELS = {
+      'linkedin': 'LinkedIn',
+      'instagram-feed': 'Instagram Feed',
+      'instagram-reels': 'Instagram Reels',
+      'instagram-story': 'Instagram Story',
+      'tiktok': 'TikTok',
+      'youtube': 'YouTube',
+      'aniversario': 'Aniversário',
+      'video-generico': 'Vídeo (Gravação)',
+      'observacao': 'Observação Interna',
+    };
+    const getTypeLabel = (type) => TYPE_LABELS[type] || type.toUpperCase();
+
     const exportMonthToPDF = (currentMonthData, monthName, totalPosts) => {
       if (!window.jspdf) {
         alert("Aguarde um momento, o gerador de PDF ainda está carregando...");
@@ -186,19 +230,14 @@
       currentMonthData.forEach(day => {
         if (day.hasEvents) {
           day.events.forEach(ev => {
-            let metricText = '';
-            if (ev.views || ev.engagement) {
-              metricText = `Views: ${ev.views || 0} | Interações: ${ev.engagement || 0}`;
-            }
-            let respRev = ev.responsible || '-';
-            if (ev.reviewer) respRev += `\n(Rev: ${ev.reviewer})`;
+            let resp = [ev.responsible, ev.responsible2].filter(Boolean).join(' + ') || '-';
+            if (ev.reviewer) resp += `\n(Rev: ${ev.reviewer})`;
             tableData.push([
               day.dateStr,
-              ev.type.toUpperCase(),
+              getTypeLabel(ev.type),
               ev.title,
-              respRev,
+              resp,
               ev.details || '-',
-              metricText || '-'
             ]);
           });
         }
@@ -208,10 +247,10 @@
 
       doc.autoTable({
         startY: 28,
-        head: [['Data', 'Plataforma', 'Título', 'Responsável/Revisor', 'Detalhes', 'Resultados']],
+        head: [['Data', 'Plataforma', 'Título', 'Responsável/Revisor', 'Detalhes']],
         body: tableData,
         styles: { fontSize: 9, cellPadding: 3 },
-        headStyles: { fillColor: [15, 23, 42] },
+        headStyles: { fillColor: [0, 24, 48] },
       });
 
       doc.save(`marketing-serrajr-${monthName.toLowerCase()}-2026.pdf`);
@@ -224,14 +263,15 @@
 
       currentMonthData.forEach(day => {
         if (day.hasEvents) {
-          const tasksForDay = day.events.filter(ev => ev.type !== 'birthday' && ev.type !== 'observacao' && ev.responsible);
+          const tasksForDay = day.events.filter(ev => ev.type !== 'aniversario' && ev.type !== 'observacao' && ev.responsible);
 
           if (tasksForDay.length > 0) {
             hasTasks = true;
             message += `*🗓️ ${day.dateStr} (${day.dayOfWeek})*\n`;
             tasksForDay.forEach(ev => {
-              message += `👉 *${ev.type.toUpperCase()}* | ${ev.title}\n`;
-              message += `👤 Faz: @${ev.responsible}\n`;
+              message += `👉 *${getTypeLabel(ev.type)}* | ${ev.title}\n`;
+              const doers = [ev.responsible, ev.responsible2].filter(Boolean).map(n => `@${n}`).join(' e ');
+              message += `👤 Faz: ${doers}\n`;
               if (ev.reviewer) {
                 message += `👀 Revisor: @${ev.reviewer}\n`;
               }
@@ -309,12 +349,11 @@
       const [editingEventId, setEditingEventId] = useState(null);
 
       const [newEventTitle, setNewEventTitle] = useState('');
-      const [newEventType, setNewEventType] = useState('feed');
+      const [newEventType, setNewEventType] = useState('instagram-feed');
       const [newEventResponsible, setNewEventResponsible] = useState('');
+      const [newEventResponsible2, setNewEventResponsible2] = useState('');
       const [newEventReviewer, setNewEventReviewer] = useState('');
       const [newEventDetails, setNewEventDetails] = useState('');
-      const [newEventViews, setNewEventViews] = useState('');
-      const [newEventEngagement, setNewEventEngagement] = useState('');
 
       const [hideEmptyDays, setHideEmptyDays] = useState(false);
 
@@ -332,7 +371,18 @@
       // Carregar dados salvos
       useEffect(() => {
         const savedDB = localStorage.getItem(EVENT_DB_KEY);
-        if (savedDB) setEventDB(JSON.parse(savedDB));
+        if (savedDB) {
+          const parsed = JSON.parse(savedDB);
+          const migrated = {};
+          Object.keys(parsed).forEach(key => {
+            migrated[key] = parsed[key].map(ev => ({
+              ...ev,
+              type: migrateType(ev.type),
+              responsible2: ev.responsible2 || '',
+            }));
+          });
+          setEventDB(migrated);
+        }
         else setEventDB(initialEventDB);
 
         const savedTeam = localStorage.getItem(TEAM_KEY);
@@ -371,19 +421,15 @@
 
       const dashboardStats = useMemo(() => {
         let totalPosts = 0;
-        let totalViews = 0;
-        let totalEngagement = 0;
 
         currentMonthData.forEach(day => {
           day.events.forEach(ev => {
-            if (ev.type !== 'birthday' && ev.type !== 'observacao') {
+            if (ev.type !== 'aniversario' && ev.type !== 'observacao') {
               totalPosts++;
-              totalViews += Number(ev.views) || 0;
-              totalEngagement += Number(ev.engagement) || 0;
             }
           });
         });
-        return { totalPosts, totalViews, totalEngagement };
+        return { totalPosts };
       }, [currentMonthData]);
 
       const handlePrevMonth = () => setCurrentMonthIndex((prev) => (prev > 0 ? prev - 1 : 11));
@@ -395,12 +441,11 @@
       const resetForm = () => {
         setEditingEventId(null);
         setNewEventTitle('');
-        setNewEventType('feed');
+        setNewEventType('instagram-feed');
         setNewEventResponsible('');
+        setNewEventResponsible2('');
         setNewEventReviewer('');
         setNewEventDetails('');
-        setNewEventViews('');
-        setNewEventEngagement('');
       };
 
       const prepareEdit = (ev) => {
@@ -408,10 +453,9 @@
         setNewEventType(ev.type);
         setNewEventTitle(ev.title);
         setNewEventResponsible(ev.responsible || '');
+        setNewEventResponsible2(ev.responsible2 || '');
         setNewEventReviewer(ev.reviewer || '');
         setNewEventDetails(ev.details || '');
-        setNewEventViews(ev.views || '');
-        setNewEventEngagement(ev.engagement || '');
       };
 
       const saveEvent = (e) => {
@@ -425,10 +469,9 @@
             type: newEventType,
             title: newEventTitle.trim(),
             responsible: newEventResponsible,
+            responsible2: newEventResponsible2,
             reviewer: newEventReviewer,
             details: newEventDetails.trim(),
-            views: newEventViews,
-            engagement: newEventEngagement
           };
 
           if (editingEventId) {
@@ -523,6 +566,17 @@
         }
       };
 
+      const [promptCopied, setPromptCopied] = useState(false);
+
+      const copyAIPrompt = () => {
+        if (!newEventTitle.trim()) return;
+        const prompt = `Sou da equipe de marketing da Serra Jr. Engenharia (empresa júnior de engenharia mecânica). Preciso de uma sugestão de pauta/direcionamento para o seguinte post:\n\nPlataforma: ${getTypeLabel(newEventType)}\nTítulo: ${newEventTitle.trim()}\n\nMe dê uma sugestão curta (2-4 frases) de ideia/roteiro/direcionamento criativo para esse post, em português, tom profissional mas jovem.`;
+        navigator.clipboard.writeText(prompt).then(() => {
+          setPromptCopied(true);
+          setTimeout(() => setPromptCopied(false), 2000);
+        });
+      };
+
       const exportToPDF = () => exportMonthToPDF(currentMonthData, MONTHS[currentMonthIndex], dashboardStats.totalPosts);
 
       const openWhatsAppModal = () => {
@@ -578,84 +632,70 @@
       };
 
       return (
-        <div className="min-h-screen bg-slate-100 text-slate-800 font-sans p-4 md:p-8">
+        <div className="min-h-screen text-slate-800 font-sans p-4 md:p-8">
           {/* HEADER */}
-          <div className="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3 whitespace-nowrap">
-                <img src="logo2.png" alt="Serra Jr." className="w-10 h-10 object-contain shrink-0" />
+          <div className="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center bg-[#001830] p-4 md:p-6 rounded-2xl shadow-sm">
+            <div className="w-full md:w-auto">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2 md:gap-3">
+                <img src="logo.png" alt="Serra Jr." className="w-7 h-7 md:w-10 md:h-10 object-contain shrink-0" />
                 <span>Marketing Studio 2026</span>
               </h1>
-              <p className="text-slate-500 mt-1 font-medium flex items-center gap-2">
+              <p className="text-white/60 mt-1 font-medium flex items-center gap-2">
                 Serra Jr. Engenharia
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">Admin</span>
+                <span className="text-xs bg-[#ff6600] text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">Admin</span>
               </p>
             </div>
             <div className="mt-6 md:mt-0 flex gap-3 flex-wrap justify-end">
-              <button onClick={() => setShowTeamModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors text-sm font-medium border border-slate-200">
+              <button onClick={() => setShowTeamModal(true)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium">
                 <IconUsers className="w-4 h-4" /> Gerenciar Equipe
               </button>
-              <button onClick={exportData} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
+              <button onClick={exportData} className="flex items-center gap-2 px-4 py-2 bg-[#04add7] hover:bg-[#039bc0] text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
                 <IconDownload className="w-4 h-4" /> Exportar Dados
               </button>
-              <button onClick={syncWithGoogleCalendar} disabled={syncing} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
+              <button onClick={syncWithGoogleCalendar} disabled={syncing} className="flex items-center gap-2 px-4 py-2 bg-[#ff6600] hover:bg-[#e65c00] disabled:opacity-60 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
                 <IconCalendar className="w-4 h-4" /> {syncing ? 'Sincronizando...' : 'Sincronizar com Google Agenda'}
               </button>
-              <button onClick={() => setShowSyncConfigModal(true)} className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors text-sm font-medium border border-slate-200" title="Configurar sincronização">
+              <button onClick={() => setShowSyncConfigModal(true)} className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium" title="Configurar sincronização">
                 <IconEdit3 className="w-4 h-4" />
               </button>
               <button onClick={openWhatsAppModal} className="flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#1ebd5a] text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
                 <IconMessageCircle className="w-4 h-4" /> Pauta WhatsApp
               </button>
-              <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">
+              <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium">
                 <IconDownload className="w-4 h-4" /> Relatório PDF
               </button>
-              <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-red-100 hover:text-red-600 text-slate-700 rounded-lg transition-colors text-sm font-medium border border-slate-200">
+              <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-red-500/80 text-white rounded-lg transition-colors text-sm font-medium">
                 <IconLock className="w-4 h-4" /> Sair
               </button>
             </div>
           </div>
 
           {/* DASHBOARD */}
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="p-3 bg-blue-100 text-blue-600 rounded-lg"><IconCalendar className="w-6 h-6" /></div>
+          <div className="max-w-6xl mx-auto mb-8">
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 max-w-xs">
+                <div className="p-3 bg-[#04add7]/10 text-[#04add7] rounded-lg"><IconCalendar className="w-6 h-6" /></div>
                 <div>
                     <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Posts em {MONTHS[currentMonthIndex]}</p>
                     <p className="text-2xl font-bold text-slate-800">{dashboardStats.totalPosts}</p>
                 </div>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 text-emerald-600 rounded-lg"><IconEye className="w-6 h-6" /></div>
-                <div>
-                    <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Visualizações Mensais</p>
-                    <p className="text-2xl font-bold text-slate-800">{dashboardStats.totalViews.toLocaleString('pt-BR')}</p>
-                </div>
-            </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="p-3 bg-pink-100 text-pink-600 rounded-lg"><IconHeart className="w-6 h-6" /></div>
-                <div>
-                    <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Interações / Engajamento</p>
-                    <p className="text-2xl font-bold text-slate-800">{dashboardStats.totalEngagement.toLocaleString('pt-BR')}</p>
-                </div>
-            </div>
           </div>
 
           {/* CONTROLES DO CALENDÁRIO */}
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between mb-4 bg-slate-800 text-white p-3 rounded-xl shadow-md gap-4 md:gap-0">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between mb-4 bg-[#001830] text-white p-3 rounded-xl shadow-md gap-4 md:gap-0">
             <div className="flex items-center justify-between w-full md:w-auto">
-                <button onClick={handlePrevMonth} className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                <button onClick={handlePrevMonth} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                 <IconChevronLeft className="w-6 h-6" />
                 </button>
                 <h2 className="text-2xl font-bold text-center uppercase tracking-widest w-64">
                 {MONTHS[currentMonthIndex]}
                 </h2>
-                <button onClick={handleNextMonth} className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                <button onClick={handleNextMonth} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                 <IconChevronRight className="w-6 h-6" />
                 </button>
             </div>
 
-            <button onClick={() => setHideEmptyDays(!hideEmptyDays)} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm font-medium w-full md:w-auto justify-center">
+            <button onClick={() => setHideEmptyDays(!hideEmptyDays)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium w-full md:w-auto justify-center">
                 {hideEmptyDays ? <IconEye className="w-4 h-4" /> : <IconEyeOff className="w-4 h-4" />}
                 {hideEmptyDays ? "Mostrar todos os dias" : "Ocultar dias vazios"}
             </button>
@@ -689,9 +729,9 @@
                               <div>
                                 <span className="font-bold text-sm mb-1 block leading-tight">{getEventIcon(ev.type)} {ev.title}</span>
                                 <div className="mt-2 flex flex-col gap-0.5">
-                                  {ev.responsible && (
+                                  {(ev.responsible || ev.responsible2) && (
                                       <span className="text-[11px] font-semibold flex items-center gap-1 opacity-80">
-                                          <IconUser className="w-3 h-3" /> Faz: {ev.responsible}
+                                          <IconUser className="w-3 h-3" /> Faz: {[ev.responsible, ev.responsible2].filter(Boolean).join(' + ')}
                                       </span>
                                   )}
                                   {ev.reviewer && (
@@ -701,12 +741,6 @@
                                   )}
                                 </div>
                               </div>
-                              {(ev.views || ev.engagement) && (
-                                  <div className="mt-3 pt-2 border-t border-current/20 flex gap-3 text-xs font-semibold opacity-90">
-                                      {ev.views && <span title="Visualizações">👁️ {ev.views}</span>}
-                                      {ev.engagement && <span title="Interações">❤️ {ev.engagement}</span>}
-                                  </div>
-                              )}
                               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <IconEdit3 className="w-4 h-4 opacity-50" />
                               </div>
@@ -862,7 +896,7 @@
                               <div className="flex justify-between items-start">
                                   <div>
                                       <span className="font-bold text-sm block mb-1">{getEventIcon(ev.type)} {ev.title}</span>
-                                      {ev.responsible && <span className="text-xs opacity-90 block">Faz: {ev.responsible}</span>}
+                                      {(ev.responsible || ev.responsible2) && <span className="text-xs opacity-90 block">Faz: {[ev.responsible, ev.responsible2].filter(Boolean).join(' + ')}</span>}
                                       {ev.reviewer && <span className="text-xs opacity-90 block">Rev: {ev.reviewer}</span>}
                                   </div>
                                   <button onClick={(e) => { e.stopPropagation(); deleteEvent(selectedDay.dateKey, ev.id); }} className="p-1 text-inherit opacity-60 hover:opacity-100"><IconTrash2 className="w-4 h-4" /></button>
@@ -882,15 +916,15 @@
                       <div className="grid grid-cols-1 gap-3">
                           <div>
                             <label className="block text-xs font-bold text-slate-500 mb-1">Plataforma/Tipo</label>
-                            <select value={newEventType} onChange={(e) => setNewEventType(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 font-medium">
-                                <option value="feed">📱 Instagram Feed</option>
-                                <option value="story">🤳 Instagram Story</option>
+                            <select value={newEventType} onChange={(e) => setNewEventType(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#04add7] font-medium">
                                 <option value="linkedin">💼 LinkedIn</option>
+                                <option value="instagram-feed">📱 Instagram Feed</option>
+                                <option value="instagram-reels">🎬 Instagram Reels</option>
+                                <option value="instagram-story">🤳 Instagram Story</option>
                                 <option value="tiktok">🎵 TikTok</option>
                                 <option value="youtube">🟥 YouTube</option>
-                                <option value="x">𝕏 X (Twitter)</option>
-                                <option value="video">▶️ Vídeo Genérico</option>
-                                <option value="birthday">🎂 Aniversário</option>
+                                <option value="aniversario">🎂 Aniversário</option>
+                                <option value="video-generico">🎥 Vídeo Genérico (Dia de Gravação)</option>
                                 <option value="observacao">📌 Observação Interna</option>
                             </select>
                           </div>
@@ -899,45 +933,45 @@
                       <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
                           <div className="col-span-1">
                             <label className="block text-xs font-bold text-slate-600 mb-1">Responsável (Faz)</label>
-                            <select value={newEventResponsible} onChange={(e) => setNewEventResponsible(e.target.value)} className="w-full bg-white border border-slate-300 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                            <select value={newEventResponsible} onChange={(e) => setNewEventResponsible(e.target.value)} className="w-full bg-white border border-slate-300 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#04add7]">
                                 <option value="">Não atribuído</option>
                                 {teamMembers.map(member => <option key={member} value={member}>{member}</option>)}
                             </select>
                           </div>
                           <div className="col-span-1">
-                            <label className="block text-xs font-bold text-indigo-600 mb-1">Revisor (Corrige)</label>
-                            <select value={newEventReviewer} onChange={(e) => setNewEventReviewer(e.target.value)} className="w-full bg-white border border-indigo-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                            <label className="block text-xs font-bold text-slate-600 mb-1">Responsável 2 (Dupla, opcional)</label>
+                            <select value={newEventResponsible2} onChange={(e) => setNewEventResponsible2(e.target.value)} className="w-full bg-white border border-slate-300 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#04add7]">
+                                <option value="">Ninguém</option>
+                                {teamMembers.filter(m => m !== newEventResponsible).map(member => <option key={member} value={member}>{member}</option>)}
+                            </select>
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-xs font-bold text-[#ff6600] mb-1">Revisor (Corrige)</label>
+                            <select value={newEventReviewer} onChange={(e) => setNewEventReviewer(e.target.value)} className="w-full bg-white border border-orange-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#ff6600]">
                                 <option value="">Não atribuído</option>
-                                {teamMembers.map(member => <option key={member} value={member}>{member}</option>)}
+                                {REVIEWERS.map(member => <option key={member} value={member}>{member}</option>)}
                             </select>
                           </div>
                       </div>
 
                       <div>
                         <label className="block text-xs font-bold text-slate-500 mb-1">Título</label>
-                        <input type="text" placeholder="Ex: Trends de Computação" value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                        <input type="text" placeholder="Ex: Trends de Computação" value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#04add7]" />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 mb-1">Pauta / Direcionamento</label>
-                        <textarea placeholder="Referência, roteiro, ideias de arte..." value={newEventDetails} onChange={(e) => setNewEventDetails(e.target.value)} rows="2" className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-xs font-bold text-slate-500">Pauta / Direcionamento</label>
+                          <button type="button" onClick={copyAIPrompt} disabled={!newEventTitle.trim()} className="flex items-center gap-1 text-xs font-medium text-[#04add7] hover:underline disabled:opacity-40 disabled:no-underline">
+                            {promptCopied ? <IconCheck className="w-3 h-3" /> : <IconCopy className="w-3 h-3" />}
+                            {promptCopied ? 'Prompt copiado!' : 'Copiar prompt para IA'}
+                          </button>
+                        </div>
+                        <textarea placeholder="Referência, roteiro, ideias de arte..." value={newEventDetails} onChange={(e) => setNewEventDetails(e.target.value)} rows="2" className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#04add7] resize-none"></textarea>
+                        <p className="text-[10px] text-slate-400 mt-1">Cole o prompt no claude.ai ou ChatGPT, e cole a resposta aqui.</p>
                       </div>
 
-                      <div className="bg-slate-50 p-3 border border-slate-200 rounded-xl">
-                          <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wide">📊 Resultados (Após Publicar)</label>
-                          <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                  <label className="block text-[10px] text-slate-500 mb-1">Visualizações / Alcance</label>
-                                  <input type="number" placeholder="Ex: 1500" value={newEventViews} onChange={(e) => setNewEventViews(e.target.value)} className="w-full border border-slate-200 rounded text-sm px-2 py-1" />
-                              </div>
-                              <div>
-                                  <label className="block text-[10px] text-slate-500 mb-1">Likes / Comentários</label>
-                                  <input type="number" placeholder="Ex: 230" value={newEventEngagement} onChange={(e) => setNewEventEngagement(e.target.value)} className="w-full border border-slate-200 rounded text-sm px-2 py-1" />
-                              </div>
-                          </div>
-                      </div>
-
-                      <button type="submit" disabled={!newEventTitle.trim()} className="w-full mt-4 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md">
+                      <button type="submit" disabled={!newEventTitle.trim()} className="w-full mt-4 bg-[#001830] hover:bg-[#00263f] disabled:bg-slate-300 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md">
                         {editingEventId ? <IconEdit3 className="w-4 h-4" /> : <IconPlus className="w-4 h-4" />}
                         {editingEventId ? "Salvar Alterações" : "Agendar Conteúdo"}
                       </button>

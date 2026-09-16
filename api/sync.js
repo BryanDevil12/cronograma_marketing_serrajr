@@ -10,6 +10,7 @@ function contentHash(dateKey, ev) {
     type: ev.type,
     title: ev.title,
     responsible: ev.responsible || '',
+    responsible2: ev.responsible2 || '',
     reviewer: ev.reviewer || '',
     details: ev.details || '',
   });
@@ -90,6 +91,7 @@ module.exports = async (req, res) => {
   let allNames = [];
   currentEvents.forEach(({ ev }) => {
     if (ev.responsible) allNames.push(ev.responsible);
+    if (ev.responsible2) allNames.push(ev.responsible2);
     if (ev.reviewer) allNames.push(ev.reviewer);
   });
 
@@ -126,7 +128,7 @@ module.exports = async (req, res) => {
     const key = `${dateKey}:${ev.id}`;
     const existing = existingByKey.get(key);
     const hash = contentHash(dateKey, ev);
-    const attendeeEmails = [ev.responsible, ev.reviewer]
+    const attendeeEmails = [ev.responsible, ev.responsible2, ev.reviewer]
       .filter(Boolean)
       .map((name) => emailsByName[name])
       .filter(Boolean);
