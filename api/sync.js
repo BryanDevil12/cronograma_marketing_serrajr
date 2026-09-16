@@ -100,6 +100,20 @@ module.exports = async (req, res) => {
 
   const currentKeys = new Set(currentEvents.map(({ dateKey, ev }) => `${dateKey}:${ev.id}`));
 
+  // Proteção contra sync feito a partir de um navegador/perfil sem os dados
+  // reais do cronograma (ex: aba anônima): se o payload enviado teria que
+  // excluir uma fatia grande do que já está sincronizado, recusa e avisa,
+  // em vez de apagar tudo silenciosamente.
+  const existingCount = (existingRows || []).length;
+  const wouldDeleteCount = (existingRows || []).filter((row) => !currentKeys.has(`${row.date_key}:${row.dashboard_event_id}`)).length;
+  if (existingCount >= 5 && wouldDeleteCount > existingCount * 0.5) {
+    res.status(409).json({
+      error: 'suspicious_payload',
+      message: `Este envio excluiria ${wouldDeleteCount} de ${existingCount} eventos já sincronizados. Isso costuma acontecer ao sincronizar de um navegador/perfil sem os dados reais do cronograma. Sincronização cancelada por segurança — confira se está no navegador certo.`,
+    });
+    return;
+  }
+
   const summary = { created: 0, updated: 0, deleted: 0, skipped: [], failed: [] };
 
   let allNames = [];

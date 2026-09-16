@@ -27,9 +27,24 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const rows = members
+    const incoming = members
       .filter((m) => m && typeof m.name === 'string' && m.name.trim())
       .map((m) => ({ name: m.name.trim(), email: (m.email || '').trim() || null }));
+
+    // Nunca apagar um e-mail já cadastrado: se o payload vier sem e-mail para
+    // um nome que já tem um salvo, mantém o valor existente em vez de sobrescrever
+    // com null (protege contra sync feito de um navegador/perfil sem os dados locais).
+    const { data: existing, error: fetchError } = await supabase.from('team_members').select('name, email');
+    if (fetchError) {
+      res.status(500).json({ error: 'supabase_error', message: fetchError.message });
+      return;
+    }
+    const existingEmailByName = new Map((existing || []).map((r) => [r.name, r.email]));
+
+    const rows = incoming.map((m) => ({
+      name: m.name,
+      email: m.email || existingEmailByName.get(m.name) || null,
+    }));
 
     const { error } = await supabase.from('team_members').upsert(rows, { onConflict: 'name' });
 
