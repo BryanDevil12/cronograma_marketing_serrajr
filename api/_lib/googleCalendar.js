@@ -36,7 +36,7 @@ function buildEventResource(dateKey, ev, attendeeEmails) {
     reminders: {
       useDefault: false,
       overrides: [
-        { method: 'notification', minutes: 48 * 60, description: 'PRAZO PRA ENVIAR PRA REVISÃO' },
+        { method: 'notification', minutes: 48 * 60 },
         { method: 'notification', minutes: 24 * 60 },
         { method: 'notification', minutes: 8 * 60 },
         { method: 'notification', minutes: 4 * 60 },
