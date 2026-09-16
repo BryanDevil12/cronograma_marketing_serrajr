@@ -155,10 +155,16 @@ module.exports = async (req, res) => {
         res.status(401).json({ error: 'google_reauth_required' });
         return;
       }
-      const googleDetail = err && err.response && err.response.data && err.response.data.error
-        ? JSON.stringify(err.response.data.error)
+      const googleErrors = err && err.errors ? JSON.stringify(err.errors) : null;
+      const googleDetail = err && err.response && err.response.data
+        ? JSON.stringify(err.response.data)
         : null;
-      summary.failed.push({ dateKey, eventId: ev.id, action: existing ? 'update' : 'create', message: googleDetail || err.message });
+      summary.failed.push({
+        dateKey,
+        eventId: ev.id,
+        action: existing ? 'update' : 'create',
+        message: googleErrors || googleDetail || err.message,
+      });
     }
   }
 
