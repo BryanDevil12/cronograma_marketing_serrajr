@@ -32,6 +32,15 @@ function flattenEvents(eventDB) {
   return flat;
 }
 
+// Processa itens em lotes concorrentes (em vez de um por um), respeitando
+// um limite para não estourar o rate limit da Google Calendar API.
+async function processInBatches(items, batchSize, worker) {
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    await Promise.all(batch.map(worker));
+  }
+}
+
 async function resolveAttendeeEmails(supabase, names) {
   const uniqueNames = Array.from(new Set(names.filter(Boolean)));
   if (uniqueNames.length === 0) return { emailsByName: {}, skipped: [] };
@@ -110,11 +119,14 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // Excluir do Google eventos que não existem mais no payload atual.
-  for (const row of existingRows || []) {
-    const key = `${row.date_key}:${row.dashboard_event_id}`;
-    if (currentKeys.has(key)) continue;
+  let reauthRequired = false;
+  const BATCH_SIZE = 6;
 
+  // Excluir do Google eventos que não existem mais no payload atual.
+  const rowsToDelete = (existingRows || []).filter((row) => !currentKeys.has(`${row.date_key}:${row.dashboard_event_id}`));
+
+  await processInBatches(rowsToDelete, BATCH_SIZE, async (row) => {
+    if (reauthRequired) return;
     try {
       await deleteEvent(row.google_event_id);
       const { error: deleteError } = await supabase.from('synced_events').delete().eq('date_key', row.date_key).eq('dashboard_event_id', row.dashboard_event_id);
@@ -122,15 +134,21 @@ module.exports = async (req, res) => {
       summary.deleted++;
     } catch (err) {
       if (isReauthError(err)) {
-        res.status(401).json({ error: 'google_reauth_required' });
+        reauthRequired = true;
         return;
       }
       summary.failed.push({ dateKey: row.date_key, eventId: row.dashboard_event_id, action: 'delete', message: err.message });
     }
+  });
+
+  if (reauthRequired) {
+    res.status(401).json({ error: 'google_reauth_required' });
+    return;
   }
 
   // Criar ou atualizar eventos do payload atual.
-  for (const { dateKey, ev } of currentEvents) {
+  await processInBatches(currentEvents, BATCH_SIZE, async ({ dateKey, ev }) => {
+    if (reauthRequired) return;
     const key = `${dateKey}:${ev.id}`;
     const existing = existingByKey.get(key);
     const hash = contentHash(dateKey, ev);
@@ -162,7 +180,7 @@ module.exports = async (req, res) => {
       }
     } catch (err) {
       if (isReauthError(err)) {
-        res.status(401).json({ error: 'google_reauth_required' });
+        reauthRequired = true;
         return;
       }
       const googleErrors = err && err.errors ? JSON.stringify(err.errors) : null;
@@ -176,6 +194,11 @@ module.exports = async (req, res) => {
         message: googleErrors || googleDetail || err.message,
       });
     }
+  });
+
+  if (reauthRequired) {
+    res.status(401).json({ error: 'google_reauth_required' });
+    return;
   }
 
   res.status(200).json(summary);
