@@ -4,6 +4,10 @@ const { requireAdminSecret } = require('./_lib/auth');
 const { getSupabase } = require('./_lib/supabase');
 const { createEvent, updateEvent, deleteEvent, isReauthError } = require('./_lib/googleCalendar');
 
+// Incrementar quando a config fixa do evento no Google (reminders, etc.) mudar,
+// para forçar re-sincronização de todos os eventos já criados.
+const SYNC_CONFIG_VERSION = 2;
+
 function contentHash(dateKey, ev) {
   const payload = JSON.stringify({
     dateKey,
@@ -13,6 +17,7 @@ function contentHash(dateKey, ev) {
     responsible2: ev.responsible2 || '',
     reviewer: ev.reviewer || '',
     details: ev.details || '',
+    syncConfigVersion: SYNC_CONFIG_VERSION,
   });
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
