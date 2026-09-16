@@ -6,7 +6,7 @@ const { createEvent, updateEvent, deleteEvent, isReauthError } = require('./_lib
 
 // Incrementar quando a config fixa do evento no Google (reminders, etc.) mudar,
 // para forçar re-sincronização de todos os eventos já criados.
-const SYNC_CONFIG_VERSION = 2;
+const SYNC_CONFIG_VERSION = 3;
 
 function contentHash(dateKey, ev) {
   const payload = JSON.stringify({

@@ -366,21 +366,25 @@
       const [syncing, setSyncing] = useState(false);
       const [syncResult, setSyncResult] = useState(null);
 
-      // Carregar dados salvos
+      const [eventsLoaded, setEventsLoaded] = useState(false);
+      const [eventsLoadError, setEventsLoadError] = useState(null);
+
+      const migrateEventDB = (raw) => {
+        const migrated = {};
+        Object.keys(raw || {}).forEach(key => {
+          migrated[key] = raw[key].map(ev => ({
+            ...ev,
+            type: migrateType(ev.type),
+            responsible2: ev.responsible2 || '',
+          }));
+        });
+        return migrated;
+      };
+
+      // Carregar config e dados locais (fallback enquanto o backend não responde)
       useEffect(() => {
         const savedDB = localStorage.getItem(EVENT_DB_KEY);
-        if (savedDB) {
-          const parsed = JSON.parse(savedDB);
-          const migrated = {};
-          Object.keys(parsed).forEach(key => {
-            migrated[key] = parsed[key].map(ev => ({
-              ...ev,
-              type: migrateType(ev.type),
-              responsible2: ev.responsible2 || '',
-            }));
-          });
-          setEventDB(migrated);
-        }
+        if (savedDB) setEventDB(migrateEventDB(JSON.parse(savedDB)));
         else setEventDB(initialEventDB);
 
         const savedTeam = localStorage.getItem(TEAM_KEY);
@@ -394,7 +398,27 @@
         }
       }, []);
 
-      // Salvar dados
+      // Buscar o cronograma real do backend (fonte de verdade compartilhada),
+      // assim que a URL do backend estiver disponível.
+      useEffect(() => {
+        if (!syncApiUrl) return;
+        const baseUrl = syncApiUrl.replace(/\/$/, '');
+        fetch(`${baseUrl}/api/events`)
+          .then(async (r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          })
+          .then((data) => {
+            setEventDB(migrateEventDB(data.eventDB || {}));
+            setEventsLoaded(true);
+            setEventsLoadError(null);
+          })
+          .catch((err) => {
+            setEventsLoadError(err.message);
+          });
+      }, [syncApiUrl]);
+
+      // Salvar dados localmente (cache) sempre que mudar
       useEffect(() => {
         localStorage.setItem(EVENT_DB_KEY, JSON.stringify(eventDB));
       }, [eventDB]);
@@ -402,6 +426,21 @@
       useEffect(() => {
         localStorage.setItem(TEAM_KEY, JSON.stringify(teamMembers));
       }, [teamMembers]);
+
+      // Salvar no backend (fonte de verdade) sempre que o cronograma mudar,
+      // com debounce para não disparar uma chamada a cada tecla digitada.
+      useEffect(() => {
+        if (!syncApiUrl || !eventsLoaded) return;
+        const baseUrl = syncApiUrl.replace(/\/$/, '');
+        const timer = setTimeout(() => {
+          fetch(`${baseUrl}/api/events`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-secret': syncApiSecret },
+            body: JSON.stringify({ eventDB }),
+          }).catch(() => {});
+        }, 1500);
+        return () => clearTimeout(timer);
+      }, [eventDB, syncApiUrl, syncApiSecret, eventsLoaded]);
 
       const calendarData = useMemo(() => buildCalendarData(eventDB), [eventDB]);
       const currentMonthData = calendarData[currentMonthIndex];
@@ -623,6 +662,17 @@
 
       return (
         <div className="min-h-screen text-slate-800 font-sans p-4 md:p-8">
+          {!syncApiUrl && (
+            <div className="max-w-6xl mx-auto mb-4 bg-amber-100 border border-amber-300 text-amber-800 text-sm px-4 py-3 rounded-xl flex items-center justify-between gap-3 flex-wrap">
+              <span>⚠️ Backend não configurado — este cronograma está sendo salvo só neste navegador, não vai aparecer para outros admins. Configure a URL do backend para usar o cronograma compartilhado.</span>
+              <button onClick={() => setShowSyncConfigModal(true)} className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Configurar agora</button>
+            </div>
+          )}
+          {syncApiUrl && eventsLoadError && (
+            <div className="max-w-6xl mx-auto mb-4 bg-red-100 border border-red-300 text-red-800 text-sm px-4 py-3 rounded-xl">
+              ⚠️ Não foi possível carregar o cronograma do backend ({eventsLoadError}). Mostrando a última cópia salva neste navegador — pode estar desatualizada.
+            </div>
+          )}
           {/* HEADER */}
           <div className="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center bg-[#001830] p-4 md:p-6 rounded-2xl shadow-sm">
             <div className="w-full md:w-auto">
