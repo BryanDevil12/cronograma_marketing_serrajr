@@ -117,7 +117,8 @@ module.exports = async (req, res) => {
 
     try {
       await deleteEvent(row.google_event_id);
-      await supabase.from('synced_events').delete().eq('date_key', row.date_key).eq('dashboard_event_id', row.dashboard_event_id);
+      const { error: deleteError } = await supabase.from('synced_events').delete().eq('date_key', row.date_key).eq('dashboard_event_id', row.dashboard_event_id);
+      if (deleteError) throw new Error(`Evento excluído no Google mas falhou ao remover do Supabase: ${deleteError.message}`);
       summary.deleted++;
     } catch (err) {
       if (isReauthError(err)) {
@@ -141,20 +142,22 @@ module.exports = async (req, res) => {
     try {
       if (!existing) {
         const googleEventId = await createEvent(dateKey, ev, attendeeEmails);
-        await supabase.from('synced_events').insert({
+        const { error: insertError } = await supabase.from('synced_events').insert({
           date_key: dateKey,
           dashboard_event_id: ev.id,
           google_event_id: googleEventId,
           content_hash: hash,
         });
+        if (insertError) throw new Error(`Evento criado no Google (${googleEventId}) mas falhou ao salvar no Supabase: ${insertError.message}`);
         summary.created++;
       } else if (existing.content_hash !== hash) {
         await updateEvent(existing.google_event_id, dateKey, ev, attendeeEmails);
-        await supabase
+        const { error: updateError } = await supabase
           .from('synced_events')
           .update({ content_hash: hash, last_synced_at: new Date().toISOString() })
           .eq('date_key', dateKey)
           .eq('dashboard_event_id', ev.id);
+        if (updateError) throw new Error(`Evento atualizado no Google mas falhou ao salvar no Supabase: ${updateError.message}`);
         summary.updated++;
       }
     } catch (err) {
