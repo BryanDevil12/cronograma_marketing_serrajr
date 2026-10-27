@@ -211,6 +211,40 @@
     };
     const getTypeLabel = (type) => TYPE_LABELS[type] || type.toUpperCase();
 
+    const AI_OBJETIVOS = {
+      venda: { label: 'Venda', regra: 'conecte o tema às dores do cliente e aos serviços da SerraJr; o CTA é de contato (direct ou WhatsApp) e pode incluir uma oferta ou condição especial.' },
+      conscientizacao: { label: 'Conscientização', regra: 'foque na causa, no tema social, de mercado ou da área; sem oferta, preço nem chamada para contratar; a marca aparece só de forma discreta (logo e assinatura); o CTA é de reflexão ou engajamento (compartilhar, comentar).' },
+      conhecimento: { label: 'Conhecimento', regra: 'eduque sobre um tema técnico (computação, mecânica, prototipagem ou áreas afins), entregando valor real sem vender; a SerraJr pode aparecer em no máximo uma menção sutil; o CTA é de salvar, compartilhar ou comentar.' },
+      institucional: { label: 'Institucional', regra: 'conteúdo sobre a própria SerraJr (equipe, bastidores, cultura, conquistas, eventos), com tom mais próximo, mas ainda profissional; o CTA é de acompanhar a página, comentar ou marcar alguém.' },
+    };
+
+    const buildAIPrompt = (typeLabel, title, objetivo, details) => {
+      const obj = AI_OBJETIVOS[objetivo];
+      let prompt = `Sou da equipe de marketing da Serra Jr. Engenharia, empresa júnior de engenharia mecânica e engenharia de computação. Preciso de uma pauta/direcionamento para o seguinte post:\n\nPlataforma: ${typeLabel}\nTítulo: ${title}\n`;
+      if (details && details.trim()) prompt += `Contexto já definido: ${details.trim()}\n`;
+      if (obj) {
+        prompt += `\nObjetivo do post: ${obj.label}. Adapte o direcionamento a esse objetivo: ${obj.regra}\n`;
+        if (objetivo !== 'venda') prompt += `Como o objetivo não é venda, não use linguagem comercial (oferta, desconto, "contrate", "peça orçamento").\n`;
+      }
+      prompt += `\nTom: linguagem clara, direta e segura, com autoridade técnica; sem gírias, memes, emojis, exageros ou apelos sensacionalistas. Dados e números devem ser reais e verificáveis, com a fonte quando possível; se algum dado precisar de checagem, sinalize.\n\nNosso estilo visual atual: cerca de 60% imagens reais ou renders 3D (visual profissional, tipo propaganda de grande empresa) e 40% texto, priorizando tópicos curtos em vez de texto corrido, para o lead conseguir "escanear" a publicação rapidamente.\n\nMe dê um direcionamento detalhado explicando como esse post deveria ser criado:\n- Ideia central e ângulo da abordagem\n- Sugestão de imagem/render (o que mostrar, estilo)\n- Exemplo de 2-3 tópicos que poderiam aparecer na arte (como sugestão de tom e formato, não texto final)\n- Direção da legenda (o que ela deveria comunicar, sem escrever a legenda pronta)\n\nEm português, direto ao ponto, sem explicar teoria de design.`;
+      return prompt;
+    };
+
+    const copyToClipboard = (text) => {
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+      return new Promise((resolve) => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        resolve();
+      });
+    };
+
     const exportMonthToPDF = (currentMonthData, monthName, totalPosts) => {
       if (!window.jspdf) {
         alert("Aguarde um momento, o gerador de PDF ainda está carregando...");
@@ -353,6 +387,7 @@
       const [newEventResponsible2, setNewEventResponsible2] = useState('');
       const [newEventReviewer, setNewEventReviewer] = useState('');
       const [newEventDetails, setNewEventDetails] = useState('');
+      const [newEventObjective, setNewEventObjective] = useState('');
 
       const [hideEmptyDays, setHideEmptyDays] = useState(false);
 
@@ -476,6 +511,7 @@
         setNewEventResponsible2('');
         setNewEventReviewer('');
         setNewEventDetails('');
+        setNewEventObjective('');
       };
 
       const prepareEdit = (ev) => {
@@ -486,6 +522,7 @@
         setNewEventResponsible2(ev.responsible2 || '');
         setNewEventReviewer(ev.reviewer || '');
         setNewEventDetails(ev.details || '');
+        setNewEventObjective('');
       };
 
       const saveEvent = (e) => {
@@ -599,8 +636,8 @@
 
       const copyAIPrompt = () => {
         if (!newEventTitle.trim()) return;
-        const prompt = `Sou da equipe de marketing da Serra Jr. Engenharia, empresa júnior de engenharia mecânica e engenharia de computação. Preciso de uma pauta/direcionamento para o seguinte post:\n\nPlataforma: ${getTypeLabel(newEventType)}\nTítulo: ${newEventTitle.trim()}\n\nNosso estilo visual atual: cerca de 60% imagens reais ou renders 3D (visual profissional, tipo propaganda de grande empresa) e 40% texto, priorizando tópicos curtos em vez de texto corrido, para o lead conseguir "escanear" a publicação rapidamente.\n\nMe dê um direcionamento detalhado explicando como esse post deveria ser criado:\n- Ideia central e ângulo da abordagem\n- Sugestão de imagem/render (o que mostrar, estilo)\n- Exemplo de 2-3 tópicos que poderiam aparecer na arte (como sugestão de tom e formato, não texto final)\n- Direção da legenda (o que ela deveria comunicar, sem escrever a legenda pronta)\n\nEm português, direto ao ponto, sem explicar teoria de design.`;
-        navigator.clipboard.writeText(prompt).then(() => {
+        const prompt = buildAIPrompt(getTypeLabel(newEventType), newEventTitle.trim(), newEventObjective, newEventDetails);
+        copyToClipboard(prompt).then(() => {
           setPromptCopied(true);
           setTimeout(() => setPromptCopied(false), 2000);
         });
@@ -993,8 +1030,12 @@
                       </div>
 
                       <div>
-                        <div className="flex justify-between items-center mb-1">
+                        <div className="flex justify-between items-center mb-1 gap-2">
                           <label className="block text-xs font-bold text-slate-500">Pauta / Direcionamento</label>
+                          <select value={newEventObjective} onChange={(e) => setNewEventObjective(e.target.value)} className="ml-auto bg-white border border-slate-200 text-slate-600 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-[#04add7]" title="Objetivo do post (usado no prompt para IA)">
+                            <option value="">Objetivo: deixar a IA deduzir</option>
+                            {Object.entries(AI_OBJETIVOS).map(([k, o]) => <option key={k} value={k}>Objetivo: {o.label}</option>)}
+                          </select>
                           <button type="button" onClick={copyAIPrompt} disabled={!newEventTitle.trim()} className="flex items-center gap-1 text-xs font-medium text-[#04add7] hover:underline disabled:opacity-40 disabled:no-underline">
                             {promptCopied ? <IconCheck className="w-3 h-3" /> : <IconCopy className="w-3 h-3" />}
                             {promptCopied ? 'Prompt copiado!' : 'Copiar prompt para IA'}
