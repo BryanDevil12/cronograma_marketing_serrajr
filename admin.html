@@ -230,7 +230,7 @@
       return prompt;
     };
 
-    const copyToClipboard = (text) => {
+    const copyText = (text) => {
       if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
       return new Promise((resolve) => {
         const ta = document.createElement('textarea');
@@ -637,7 +637,7 @@
       const copyAIPrompt = () => {
         if (!newEventTitle.trim()) return;
         const prompt = buildAIPrompt(getTypeLabel(newEventType), newEventTitle.trim(), newEventObjective, newEventDetails);
-        copyToClipboard(prompt).then(() => {
+        copyText(prompt).then(() => {
           setPromptCopied(true);
           setTimeout(() => setPromptCopied(false), 2000);
         });
